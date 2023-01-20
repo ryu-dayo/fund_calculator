@@ -2,6 +2,7 @@ import configparser
 import pandas as pd
 import requests
 import time
+import json
 import sys
 import re
 import os
@@ -55,18 +56,16 @@ def parse_one_page(html):
     解析网页内容
     '''
     content = re.findall('\((.*?)\)',html)[0]
-    web_content = pd.read_json(content)
-    return web_content
+    return content
 
-def get_fund_info(fund_code,pageSize=20,startDate='',endDate='',pageIndex=1):
+def get_fund_info(fund_code,pageSize=1,startDate='',endDate='',pageIndex=1):
     '''
     组合需要的信息
     '''
     html = get_one_page(fund_code,pageSize,startDate,endDate,pageIndex)
     if html is not None:
-        lsjz_data = parse_one_page(html).loc['LSJZList','Data']
-        dwjz_data = pd.DataFrame(lsjz_data).loc[:,'FSRQ':'DWJZ']
-        return dwjz_data
+        lsjz_json = json.loads(parse_one_page(html))
+        return lsjz_json
     return None
 
 def notion_create_page(json_content):
@@ -104,14 +103,16 @@ def notion_update_page(row,json_content):
 
     payload = json_content
     headers = {
+        "accept":"application/json",
         "Authorization": "Bearer "+ token,
         "Notion-Version": "2022-06-28",
+        "content-type":"application/json"
     }
 
     s = requests.session()
     s.keep_alive = False
     response = requests.patch(url, json=payload,headers=headers)
 
-    time.sleep(1)
+    time.sleep(0.5)
     # print(response.text)
     return(response.text)

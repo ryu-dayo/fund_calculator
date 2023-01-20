@@ -1,11 +1,11 @@
 #!/usr/bin/python
 # coding=utf-8
 
-from datetime import datetime
 from function import file_path
+from update_nav import get_nav
+from datetime import datetime
 import pandas as pd
 import time
-import os
 
 def trans_filter(info):
     '''
@@ -94,17 +94,14 @@ my_fund_data.to_csv(
 )
 # print(my_fund_data)
 
-#根据任意FSRQ判断，如果距离今天大于1天，则更新净值
-now_day = datetime.now()
-table_day = datetime.strptime(my_fund_data["FSRQ"][0],"%Y-%m-%d")
-if (now_day-table_day).days > 0:
-    os.system('python3.9 ' + os.path.join(os.path.dirname(os.path.abspath(__file__)),'update_nav.py'))
-    my_fund_data = pd.read_csv(
-        file_path('fund_data.csv'),
-        dtype={"fundcode":str}
-    )
+#   若净值更新日期不是今天，则更新
+now_day = datetime.now().strftime('%Y-%m-%d')
+fund_list = my_fund_data[my_fund_data['FSRQ']!=now_day]['fundcode'].unique()
+dwjz_dict = get_nav(fund_list)
+my_fund_data.loc[my_fund_data[my_fund_data['FSRQ']!=now_day].index,'DWJZ'] = my_fund_data.loc[my_fund_data[my_fund_data['FSRQ']!=now_day].index,'fundcode'].apply(lambda x:dwjz_dict.get(x)[1]).astype(float)
+my_fund_data.loc[my_fund_data[my_fund_data['FSRQ']!=now_day].index,'FSRQ'] = my_fund_data.loc[my_fund_data[my_fund_data['FSRQ']!=now_day].index,'fundcode'].apply(lambda x:dwjz_dict.get(x)[0])
 
-#计算持有收益，持有收益率，累计收益
+#   计算持有收益，持有收益率，累计收益
 my_fund_data[["cysy","cysyl"]] = 0
 my_fund_data.loc[my_fund_data["cyfe"]==0,"cccb"] = 0
 my_fund_data["ljsy"] = round(my_fund_data["cyfe"] * my_fund_data["DWJZ"] + my_fund_data["mcje"] - my_fund_data["jjbj"] + my_fund_data["jjfh"],2)

@@ -61,7 +61,7 @@ if len(diff_index_list)>0:
                 '持有收益':{'number':getattr(row,'cysy')},
                 '持有收益率':{'number':getattr(row,'cysyl')},
                 '累计收益':{'number':getattr(row,'ljsy')},
-                '更新时间':{'date':{'start':getattr(row,'FSRQ')}},
+                # '更新时间':{'date':{'start':getattr(row,'FSRQ')}},
                 # '基金名称':{'rich_text':[{'text':{'content':getattr(row,'name')}}]}
             }
         }
