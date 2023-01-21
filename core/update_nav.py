@@ -1,7 +1,58 @@
 #!/usr/bin/python
 # coding=utf-8
-from function import get_fund_info
 from tqdm import tqdm
+import requests
+import time
+import json
+import sys
+import re
+
+def get_one_page(fund_code,pageSize,startDate,endDate,pageIndex):
+    '''
+    网络请求
+    '''
+    url = 'http://api.fund.eastmoney.com/f10/lsjz'
+    headers = {
+        'Accept': '*/*',
+        'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+        'Connection': 'keep-alive',
+        'Referer': 'http://fundf10.eastmoney.com/',
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 11_2_3) \
+            AppleWebKit/537.36 (KHTML, like Gecko) \
+                Chrome/89.0.4389.114 Safari/537.36',
+    }
+    params = {
+        'callback': 'jQuery183023310064964236155_1618410538700',
+        'fundCode': fund_code,
+        'pageIndex': pageIndex,
+        'pageSize': pageSize,
+        'startDate': startDate,
+        'endDate': endDate,
+        '_=': str(int(time.time()))
+    }
+    try:
+        r = requests.get(url=url,headers=headers,params=params)
+        return r.text
+    except requests.exceptions.ConnectionError:
+        print("网络无法连接")
+        sys.exit()
+
+def parse_one_page(html):
+    '''
+    解析网页内容
+    '''
+    content = re.findall('\((.*?)\)',html)[0]
+    return content
+
+def get_fund_info(fund_code,pageSize=1,startDate='',endDate='',pageIndex=1):
+    '''
+    组合需要的信息
+    '''
+    html = get_one_page(fund_code,pageSize,startDate,endDate,pageIndex)
+    if html is not None:
+        lsjz_json = json.loads(parse_one_page(html))
+        return lsjz_json
+    return None
 
 def get_nav(fund_list):
     dwjz_dict = {}

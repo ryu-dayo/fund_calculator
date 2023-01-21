@@ -1,13 +1,61 @@
 #!/usr/bin/python
 # coding=utf-8
-
-from function import notion_update_page
-from function import notion_create_page
 from function import file_path
 from tqdm import tqdm
 import configparser
 import pandas as pd
+import requests
+import time
 import json
+
+def notion_create_page(json_content):
+
+    config = configparser.ConfigParser()
+    config.read(file_path('config.ini'),encoding='UTF-8')
+
+    url = "https://api.notion.com/v1/pages"
+    token = config['notion']['token']
+    
+    payload = {
+        "parent":{
+            "type":"database_id",
+            "database_id":config['notion']['database_id'],
+        },
+        "properties":json_content
+    }
+    headers = {
+        "Authorization":"Bearer "+token,
+        "Notion-Version": "2022-06-28"
+    }
+
+    response = requests.post(url, json=payload, headers=headers)
+    
+    time.sleep(0.5)
+    return(response.text)
+
+def notion_update_page(item,json_content):
+
+    config = configparser.ConfigParser()
+    config.read(file_path('config.ini'),encoding='UTF-8')
+
+    url = "https://api.notion.com/v1/pages/" + item.get('page_id')
+    token = config['notion']['token']
+
+    payload = json_content
+    headers = {
+        "accept":"application/json",
+        "Authorization": "Bearer "+ token,
+        "Notion-Version": "2022-06-28",
+        "content-type":"application/json"
+    }
+
+    s = requests.session()
+    s.keep_alive = False
+    response = requests.patch(url, json=payload,headers=headers)
+
+    time.sleep(0.5)
+    # print(response.text)
+    return(response.text)
 
 config = configparser.ConfigParser()
 config.read(file_path('config.ini'),encoding='UTF-8')
@@ -22,18 +70,19 @@ column_list = my_fund.columns
 nan_list = my_fund[my_fund['page_id'].isnull()].index.tolist()
 
 if len(nan_list)>0:
-    for item in nan_list:
+    for nan_index in nan_list:
 
         json_content = {
-            "Name":{"title":[{"text":{"content":my_fund.loc[item,"fundcode"]}}]},
-            "投资体系":{"relation":[{"id":config['notion_page_id'][my_fund.loc[item,"parent"]]}]},
+            'Name':{'title':[{'text':{'content':my_fund.loc[nan_index,'fundcode']}}]},
+            '投资体系':{'relation':[{'id':config['notion_page_id'][my_fund.loc[nan_index,'parent']]}]},
+            '基金名称':{'rich_text':[{'text':{'content':my_fund.loc[nan_index,'name']}}]}
         }
-        if my_fund.loc[item,"child"]==my_fund.loc[item,"child"]:
-            json_content["永久组合"] = {"relation":[{config['notion_page_id'][my_fund.loc[item,"child"]]}]}
+        if my_fund.loc[nan_index,'child']==my_fund.loc[nan_index,'child']:
+            json_content['永久组合'] = {'relation':[{config['notion_page_id'][my_fund.loc[nan_index,'child']]}]}
 
         response_text = notion_create_page(json_content)
-        print(response_text)
-        my_fund.loc[item,"page_id"] = json.loads(response_text)["id"]
+        # print(response_text)
+        my_fund.loc[nan_index,'page_id'] = json.loads(response_text)['id']
         
     my_fund.to_csv(
         file_path("fund_data.csv"),
@@ -41,32 +90,38 @@ if len(nan_list)>0:
     )
 
 #   补齐并对比数据
-notion_data = pd.read_csv(
-    file_path("fund_data_backup.csv"),
-    dtype={"fundcode":str}
-)
+try:
+    notion_data = pd.read_csv(
+        file_path("fund_data_backup.csv"),
+        dtype={"fundcode":str}
+    )
+except:
+    notion_data = pd.DataFrame(
+        columns=['DWJZ','FSRQ','cccb','child','cyfe','cysy','cysyl','fundcode','jjbj','jjfh','ljsy','mcfe','mcje','mcsy','name','page_id','parent']
+    )
 my_fund,notion_data = my_fund.align(notion_data,join="outer",axis=None)
 diff_index_list = my_fund.compare(notion_data).index.tolist()
 
 #   遍历基金并上传
 if len(diff_index_list)>0:
-    progress_bar = tqdm(total=len(diff_index_list))
-    for row in my_fund.loc[diff_index_list,:].itertuples():
+    progress_bar = tqdm(total=len(diff_index_list),desc='上传 Notion')
+    update_list = my_fund.loc[diff_index_list,:].to_dict('records')
+    for item in update_list:
 
         json_content = {
             'properties':{
-                '份额':{'number':getattr(row,'cyfe')},
-                '持有单价':{'number':getattr(row,'cccb')},
-                '净值':{'number':getattr(row,'DWJZ')},
-                '持有收益':{'number':getattr(row,'cysy')},
-                '持有收益率':{'number':getattr(row,'cysyl')},
-                '累计收益':{'number':getattr(row,'ljsy')},
-                # '更新时间':{'date':{'start':getattr(row,'FSRQ')}},
-                # '基金名称':{'rich_text':[{'text':{'content':getattr(row,'name')}}]}
+                '份额':{'number':item.get('cyfe')},
+                '持有单价':{'number':item.get('cccb')},
+                '净值':{'number':item.get('DWJZ')},
+                '持有收益':{'number':item.get('cysy')},
+                '持有收益率':{'number':item.get('cysyl')},
+                '累计收益':{'number':item.get('ljsy')},
+                # '更新时间':{'date':{'start':item.get('FSRQ')}},
+                # '基金名称':{'rich_text':[{'text':{'content':item.get('name')}}]}
             }
         }
 
-        response_text = notion_update_page(row,json_content)
+        response_text = notion_update_page(item,json_content)
         progress_bar.update(1)
 
     #   备份这次数据，以便下次进行对比

@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # coding=utf-8
-
 from function import file_path
+from update_name import get_name_info
 from update_nav import get_nav
 from datetime import datetime
 import pandas as pd
@@ -18,7 +18,6 @@ def trans_filter(info):
         (my_trans['info']==info)
     ]
     return trans_info
-
 
 star = time.time()
 
@@ -81,18 +80,15 @@ my_fund_data = pd.merge(
 
 #   新基金添加名称
 if my_fund_data['name'].isnull().any():
-    fund_name = pd.read_csv(
-        file_path('fund_name.csv'),
-        dtype={'fundcode':str},
-    )
-    fund_name_dict = dict(zip(fund_name['fundcode'],fund_name['name']))
-    my_fund_data['name'] = my_fund_data['fundcode'].apply(lambda x:fund_name_dict.get(x))
-
-my_fund_data.to_csv(
-    file_path('fund_data.csv'),
-    index=False,
-)
-# print(my_fund_data)
+    try:
+        name_df = pd.read_csv(
+            file_path('fund_name.csv'),
+            dtype={'fundcode':str},
+        )
+        name_dict = name_df.set_index('fundcode').T.to_dict('list')
+    except:
+        name_dict = get_name_info()
+    my_fund_data['name'] = my_fund_data['fundcode'].apply(lambda x:name_dict.get(x)[0])
 
 #   若净值更新日期不是今天，则更新
 now_day = datetime.now().strftime('%Y-%m-%d')

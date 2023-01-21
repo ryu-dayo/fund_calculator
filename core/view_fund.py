@@ -1,8 +1,10 @@
 #!/usr/bin/python
 # coding=utf-8
-import function
+from function import file_path
+import configparser
 import pandas as pd
 import time
+import json
 
 def fund_percent(type_name,child_name=''):
     if type_name!='parent':
@@ -16,13 +18,15 @@ def fund_percent(type_name,child_name=''):
 
 start = time.time()
 
+config = configparser.ConfigParser()
+config.read(file_path('config.ini'),encoding='UTF-8')
+
 my_fund = pd.read_csv(
-    function.file_path('fund_data.csv'),
+    file_path('fund_data.csv'),
     dtype={'fundcode':str},
 )
 fake_data = pd.DataFrame(
-    [['','','永久组合',10000,1,'货币',0,10000,1,'1993-07-26',0],
-    ['','','永久组合',10000,1,'黄金',0,10000,1,'1993-07-26',0],],
+    json.loads(config['view']['fake_data']),
     columns=['fundcode','page_id','parent','cyfe','cccb','child','jjfh','jjbj','DWJZ','FSRQ','cysy']
 )
 my_fund = pd.concat([my_fund,fake_data])
@@ -34,7 +38,7 @@ my_fund = my_fund[
 ].set_index(['parent','child'])
 
 for name, group in my_fund.groupby('parent'):
-    if name!="长赢指数":
+    if name not in json.loads(config['view']['hidden_type']):
         print(name)
         # print(group)
         print(fund_percent('child',name))
