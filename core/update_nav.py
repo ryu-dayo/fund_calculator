@@ -1,6 +1,8 @@
 #!/usr/bin/python
 # coding=utf-8
 from tqdm import tqdm
+from function import file_path
+import configparser
 import requests
 import time
 import json
@@ -11,7 +13,10 @@ def get_one_page(fund_code,pageSize,startDate,endDate,pageIndex):
     '''
     网络请求
     '''
-    url = 'http://api.fund.eastmoney.com/f10/lsjz'
+    config = configparser.ConfigParser()
+    config.read(file_path('config.ini'),encoding='UTF-8')
+
+    url = config['url_get']['nav_url']
     headers = {
         'Accept': '*/*',
         'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',

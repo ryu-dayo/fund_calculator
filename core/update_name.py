@@ -1,6 +1,7 @@
 #!/usr/bin/python
 # coding=utf-8
 from function import file_path
+import configparser
 import pandas as pd
 import requests
 import json
@@ -8,7 +9,11 @@ import re
 
 def get_name_page():
     '从网页获取数据'
-    url = 'http://fund.eastmoney.com/js/fundcode_search.js'
+
+    config = configparser.ConfigParser()
+    config.read(file_path('config.ini'),encoding='UTF-8')
+    
+    url = config['url_get']['name_url']
     fund_content = requests.get(url).text
     return fund_content
 

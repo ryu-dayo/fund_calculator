@@ -89,6 +89,7 @@ if my_fund_data['name'].isnull().any():
     except:
         name_dict = get_name_info()
     my_fund_data['name'] = my_fund_data['fundcode'].apply(lambda x:name_dict.get(x)[0])
+    my_fund_data['type'] = my_fund_data['fundcode'].apply(lambda x:name_dict.get(x)[1])
 
 #   若净值更新日期不是今天，则更新
 date_today = datetime.now().strftime('%Y-%m-%d')
