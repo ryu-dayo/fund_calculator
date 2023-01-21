@@ -91,11 +91,13 @@ if my_fund_data['name'].isnull().any():
     my_fund_data['name'] = my_fund_data['fundcode'].apply(lambda x:name_dict.get(x)[0])
 
 #   若净值更新日期不是今天，则更新
-now_day = datetime.now().strftime('%Y-%m-%d')
-fund_list = my_fund_data[my_fund_data['FSRQ']!=now_day]['fundcode'].unique()
-dwjz_dict = get_nav(fund_list)
-my_fund_data.loc[my_fund_data[my_fund_data['FSRQ']!=now_day].index,'DWJZ'] = my_fund_data.loc[my_fund_data[my_fund_data['FSRQ']!=now_day].index,'fundcode'].apply(lambda x:dwjz_dict.get(x)[1]).astype(float)
-my_fund_data.loc[my_fund_data[my_fund_data['FSRQ']!=now_day].index,'FSRQ'] = my_fund_data.loc[my_fund_data[my_fund_data['FSRQ']!=now_day].index,'fundcode'].apply(lambda x:dwjz_dict.get(x)[0])
+date_today = datetime.now().strftime('%Y-%m-%d')
+# date_today = '2023-01-20' #测试用
+fund_list = my_fund_data[my_fund_data['FSRQ']!=date_today]['fundcode'].unique()
+if len(fund_list)>0:
+    dwjz_dict = get_nav(fund_list)
+    my_fund_data.loc[my_fund_data[my_fund_data['FSRQ']!=date_today].index,'DWJZ'] = my_fund_data.loc[my_fund_data[my_fund_data['FSRQ']!=date_today].index,'fundcode'].apply(lambda x:dwjz_dict.get(x)[1]).astype(float)
+    my_fund_data.loc[my_fund_data[my_fund_data['FSRQ']!=date_today].index,'FSRQ'] = my_fund_data.loc[my_fund_data[my_fund_data['FSRQ']!=date_today].index,'fundcode'].apply(lambda x:dwjz_dict.get(x)[0])
 
 #   计算持有收益，持有收益率，累计收益
 my_fund_data[["cysy","cysyl"]] = 0
