@@ -1,11 +1,11 @@
-import os
+from os import path
 
 def file_path(file_name):
-    file_path = os.path.join(
-        os.path.join(
-            os.path.dirname(
-                os.path.dirname(
-                    os.path.abspath(__file__)
+    file_path = path.join(
+        path.join(
+            path.dirname(
+                path.dirname(
+                    path.abspath(__file__)
                 )
             ),
             'data'

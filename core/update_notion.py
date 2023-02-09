@@ -5,7 +5,7 @@ from tqdm import tqdm
 import configparser
 import pandas as pd
 import requests
-import time
+from time import sleep
 import json
 
 def notion_create_page(json_content):
@@ -30,7 +30,7 @@ def notion_create_page(json_content):
 
     response = requests.post(url, json=payload, headers=headers)
     
-    time.sleep(0.5)
+    sleep(0.5)
     return(response.text)
 
 def notion_update_page(item,json_content):
@@ -53,81 +53,93 @@ def notion_update_page(item,json_content):
     s.keep_alive = False
     response = requests.patch(url, json=payload,headers=headers)
 
-    time.sleep(0.5)
+    sleep(0.5)
     # print(response.text)
-    return(response.text)
+    return response.text
 
-config = configparser.ConfigParser()
-config.read(file_path('config.ini'),encoding='UTF-8')
+def if_page_nan(config,my_fund):
+    '判断page id是否为空，为空则新建page并返回id'
+    nan_list = my_fund[my_fund['page_id'].isnull()].index.tolist()
+    if len(nan_list)>0:
+        for nan_index in nan_list:
 
-my_fund = pd.read_csv(
-    file_path('fund_data.csv'),
-    dtype={'fundcode':str},
-)
-column_list = my_fund.columns
-
-#   判断page id是否为空，为空则新建page并返回id
-nan_list = my_fund[my_fund['page_id'].isnull()].index.tolist()
-
-if len(nan_list)>0:
-    for nan_index in nan_list:
-
-        json_content = {
-            'Name':{'title':[{'text':{'content':my_fund.loc[nan_index,'fundcode']}}]},
-            '投资体系':{'relation':[{'id':config['notion_page_id'][my_fund.loc[nan_index,'parent']]}]},
-            '基金名称':{'rich_text':[{'text':{'content':my_fund.loc[nan_index,'name']}}]}
-        }
-        if my_fund.loc[nan_index,'child']==my_fund.loc[nan_index,'child']:
-            json_content['永久组合'] = {'relation':[{config['notion_page_id'][my_fund.loc[nan_index,'child']]}]}
-
-        response_text = notion_create_page(json_content)
-        # print(response_text)
-        my_fund.loc[nan_index,'page_id'] = json.loads(response_text)['id']
-        
-    my_fund.to_csv(
-        file_path("fund_data.csv"),
-        index=False,
-    )
-
-#   补齐并对比数据
-try:
-    notion_data = pd.read_csv(
-        file_path("fund_data_backup.csv"),
-        dtype={"fundcode":str}
-    )
-except:
-    notion_data = pd.DataFrame(
-        columns=['DWJZ','FSRQ','cccb','child','cyfe','cysy','cysyl','fundcode','jjbj','jjfh','ljsy','mcfe','mcje','mcsy','name','page_id','parent']
-    )
-my_fund,notion_data = my_fund.align(notion_data,join="outer",axis=None)
-diff_index_list = my_fund.compare(notion_data).index.tolist()
-
-#   遍历基金并上传
-if len(diff_index_list)>0:
-    progress_bar = tqdm(total=len(diff_index_list),desc='上传 Notion')
-    update_list = my_fund.loc[diff_index_list,:].to_dict('records')
-    for item in update_list:
-
-        json_content = {
-            'properties':{
-                '份额':{'number':item.get('cyfe')},
-                '持有单价':{'number':item.get('cccb')},
-                '净值':{'number':item.get('DWJZ')},
-                '持有收益':{'number':item.get('cysy')},
-                '持有收益率':{'number':item.get('cysyl')},
-                '累计收益':{'number':item.get('ljsy')},
-                # '更新时间':{'date':{'start':item.get('FSRQ')}},
-                # '基金名称':{'rich_text':[{'text':{'content':item.get('name')}}]}
+            json_content = {
+                'Name':{'title':[{'text':{'content':my_fund.loc[nan_index,'fundcode']}}]},
+                '投资体系':{'relation':[{'id':config['notion_page_id'][my_fund.loc[nan_index,'parent']]}]},
+                '基金名称':{'rich_text':[{'text':{'content':my_fund.loc[nan_index,'name']}}]}
             }
-        }
+            if my_fund.loc[nan_index,'child']==my_fund.loc[nan_index,'child']:
+                json_content['永久组合'] = {'relation':[{config['notion_page_id'][my_fund.loc[nan_index,'child']]}]}
 
-        response_text = notion_update_page(item,json_content)
-        progress_bar.update(1)
+            response_text = notion_create_page(json_content)
+            # print(response_text)
+            my_fund.loc[nan_index,'page_id'] = json.loads(response_text)['id']
+            
+        my_fund.to_csv(
+            file_path("fund_data.csv"),
+            index=False,
+        )
+    return my_fund
 
-    #   备份这次数据，以便下次进行对比
-    my_fund.to_csv(
-        file_path("fund_data_backup.csv"),
-        index=False,
+def different_data(column_list,my_fund):
+    '补齐并对比数据'
+    try:
+        notion_data = pd.read_csv(
+            file_path("fund_data_backup.csv"),
+            dtype={"fundcode":str}
+        )
+    except:
+        notion_data = pd.DataFrame(
+            columns=column_list
+        )
+    my_fund,notion_data = my_fund.align(notion_data,join="outer",axis=None)
+    diff_index_list = my_fund.compare(notion_data).index.tolist()
+    return diff_index_list
+
+def update_data(diff_index_list,my_fund):
+    #   遍历基金并上传
+    if len(diff_index_list)>0:
+        progress_bar = tqdm(total=len(diff_index_list),desc='上传 Notion')
+        update_list = my_fund.loc[diff_index_list,:].to_dict('records')
+        for item in update_list:
+
+            json_content = {
+                'properties':{
+                    '份额':{'number':item.get('cyfe')},
+                    '持有单价':{'number':item.get('cccb')},
+                    '净值':{'number':item.get('DWJZ')},
+                    '持有收益':{'number':item.get('cysy')},
+                    '持有收益率':{'number':item.get('cysyl')},
+                    '累计收益':{'number':item.get('ljsy')},
+                    # '更新时间':{'date':{'start':item.get('FSRQ')}},
+                    # '基金名称':{'rich_text':[{'text':{'content':item.get('name')}}]}
+                }
+            }
+
+            notion_update_page(item,json_content)
+            progress_bar.update(1)
+
+        #   备份这次数据，以便下次进行对比
+        my_fund.to_csv(
+            file_path("fund_data_backup.csv"),
+            index=False,
+        )
+    else:
+        print('无修改')
+
+def update_notion():
+    config = configparser.ConfigParser()
+    config.read(file_path('config.ini'),encoding='UTF-8')
+
+    my_fund = pd.read_csv(
+        file_path('fund_data.csv'),
+        dtype={'fundcode':str},
     )
-else:
-    print('无修改')
+    column_list = my_fund.columns
+
+    my_fund = if_page_nan(config,my_fund)
+    diff_index_list = different_data(column_list,my_fund)
+    update_data(diff_index_list,my_fund)
+
+if __name__ == '__main__':
+    update_notion()

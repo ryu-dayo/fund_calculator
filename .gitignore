@@ -134,3 +134,4 @@ data/fund_data_backup.csv
 data/fund_name.csv
 data/trans_data.csv
 core/test/get_notion.py
+core/test/test.py
