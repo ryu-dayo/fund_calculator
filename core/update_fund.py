@@ -143,16 +143,21 @@ def update_fund_nav(my_fund_data):
     '若净值更新日期不是今天，则更新净值'
     date_today = datetime.now().strftime('%Y-%m-%d')
     # date_today = '2023-02-03' #测试用
-    fund_list = my_fund_data[my_fund_data['FSRQ']!=date_today]['fundcode'].unique()
+    fund_list = my_fund_data[
+        (my_fund_data['FSRQ']!=date_today)&(my_fund_data['cyfe']>0)
+    ]['fundcode'].unique()
     if len(fund_list)>0:
         dwjz_dict = get_nav(fund_list)
         not_today_index = my_fund_data[my_fund_data['FSRQ']!=date_today].index
-        my_fund_data.loc[not_today_index,'DWJZ'] = my_fund_data.loc[
-            not_today_index,'fundcode'
-        ].apply(lambda x:dwjz_dict.get(x)[1]).astype(float)
-        my_fund_data.loc[not_today_index,'FSRQ'] = my_fund_data.loc[
-            not_today_index,'fundcode'
-        ].apply(lambda x:dwjz_dict.get(x)[0])
+        try:
+            my_fund_data.loc[not_today_index,'DWJZ'] = my_fund_data.loc[
+                not_today_index,'fundcode'
+            ].apply(lambda x:dwjz_dict.get(x)[1]).astype(float)
+            my_fund_data.loc[not_today_index,'FSRQ'] = my_fund_data.loc[
+                not_today_index,'fundcode'
+            ].apply(lambda x:dwjz_dict.get(x)[0])
+        except:
+            pass
 
 def calculate_revenue(my_fund_data):
     '计算累计收益，持有收益，持有收益率'
@@ -186,7 +191,7 @@ def update_fund():
     trans_data = calculate_base_data(my_trans)
     my_fund_data = merge_data(my_fund,trans_data)
     add_fund_name(my_fund_data)
-    # update_fund_nav(my_fund_data)
+    update_fund_nav(my_fund_data)
     calculate_revenue(my_fund_data)
 
     my_fund_data.to_csv(
