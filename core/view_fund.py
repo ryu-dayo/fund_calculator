@@ -22,16 +22,15 @@ def merge_data(config):
         file_path('fund_data.csv'),
         dtype={'fundcode':str},
     )
-    column_list = my_fund.columns
 
     fake_data = pd.DataFrame(
         json.loads(config['view']['fake_data']),
-        columns=['fundcode','page_id','parent','cyfe','cccb','child','jjfh','jjbj','DWJZ','FSRQ','cysy']
+        columns=['fundcode','parent','child','amount']
     )
     my_fund = pd.concat([my_fund,fake_data])
     print('-'*30,'\n占位数据\n',fake_data,'\n','-'*30)
     my_fund['child'].fillna(my_fund['fundcode'],inplace=True) # 如果子分类为空则替换为基金编号
-    my_fund['amount'] = round((my_fund['cyfe']*my_fund['DWJZ']),2) # 计算每个基金的总金额
+
     my_fund = my_fund[
         my_fund['amount']>0
     ].set_index(['parent','child'])

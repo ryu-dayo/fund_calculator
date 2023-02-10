@@ -148,19 +148,18 @@ def update_fund_nav(my_fund_data):
     ]['fundcode'].unique()
     if len(fund_list)>0:
         dwjz_dict = get_nav(fund_list)
-        not_today_index = my_fund_data[my_fund_data['FSRQ']!=date_today].index
-        try:
-            my_fund_data.loc[not_today_index,'DWJZ'] = my_fund_data.loc[
-                not_today_index,'fundcode'
-            ].apply(lambda x:dwjz_dict.get(x)[1]).astype(float)
-            my_fund_data.loc[not_today_index,'FSRQ'] = my_fund_data.loc[
-                not_today_index,'fundcode'
-            ].apply(lambda x:dwjz_dict.get(x)[0])
-        except:
-            pass
+        not_today_index = my_fund_data[
+            (my_fund_data['FSRQ']!=date_today)&(my_fund_data['cyfe']>0)
+        ].index
+        my_fund_data.loc[not_today_index,'DWJZ'] = my_fund_data.loc[
+            not_today_index,'fundcode'
+        ].apply(lambda x:dwjz_dict.get(x)[1]).astype(float)
+        my_fund_data.loc[not_today_index,'FSRQ'] = my_fund_data.loc[
+            not_today_index,'fundcode'
+        ].apply(lambda x:dwjz_dict.get(x)[0])
 
 def calculate_revenue(my_fund_data):
-    '计算累计收益，持有收益，持有收益率'
+    '计算累计收益，持有收益，持有收益率，持有市值'
     my_fund_data["ljsy"] = round(my_fund_data["lj_cyfe"]*my_fund_data["DWJZ"]+my_fund_data["lj_mcje"]-my_fund_data["lj_jjbj"]+my_fund_data["lj_jjfh"],2)
     
     my_fund_data[["cysy","cysyl"]] = 0
@@ -168,6 +167,8 @@ def calculate_revenue(my_fund_data):
     my_fund_data.loc[my_fund_data["mcsy"]>0,"cysy"] = round(my_fund_data["ljsy"]-my_fund_data["mcsy"],2)
     my_fund_data.loc[my_fund_data["cyfe"]>0,"cysyl"] = round(my_fund_data["cysy"]/my_fund_data["jjbj"],4)
     my_fund_data.loc[my_fund_data["mcsy"]>0,"cysyl"] = round(my_fund_data["cysy"]/(my_fund_data["jjbj"]-my_fund_data["mcfe"]*my_fund_data["cccb"]),4)
+
+    my_fund_data['amount'] = round((my_fund_data['cyfe']*my_fund_data['DWJZ']),2) # 计算每个基金的总金额
     # print(my_fund_data)
 
 def update_fund():

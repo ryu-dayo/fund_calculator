@@ -105,9 +105,7 @@ def update_data(diff_index_list,my_fund):
 
             json_content = {
                 'properties':{
-                    '份额':{'number':item.get('cyfe')},
-                    '持有单价':{'number':item.get('cccb')},
-                    '净值':{'number':item.get('DWJZ')},
+                    '持有市值':{'number':item.get('amount')},
                     '持有收益':{'number':item.get('cysy')},
                     '持有收益率':{'number':item.get('cysyl')},
                     '累计收益':{'number':item.get('ljsy')},
