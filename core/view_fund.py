@@ -16,19 +16,13 @@ def fund_percent(df,type_name,child_name=''):
     percent_df['percent'] = percent_df['percent'].apply(lambda x:'%.2f%%'%(x*100))
     return percent_df
 
-def merge_data(config):
-
-    my_fund = pd.read_csv(
-        file_path('fund_data.csv'),
-        dtype={'fundcode':str},
-    )
-
+def merge_data(config,origin_fund):
     fake_data = pd.DataFrame(
         json.loads(config['view']['fake_data']),
         columns=['fundcode','parent','child','amount']
     )
-    my_fund = pd.concat([my_fund,fake_data])
-    print('-'*30,'\n占位数据\n',fake_data,'\n','-'*30)
+    my_fund = pd.concat([origin_fund,fake_data])
+    print('-'*30,'\n占位数据\n',fake_data,'\n'+'-'*30)
     my_fund['child'].fillna(my_fund['fundcode'],inplace=True) # 如果子分类为空则替换为基金编号
 
     my_fund = my_fund[
@@ -36,27 +30,32 @@ def merge_data(config):
     ].set_index(['parent','child'])
     return my_fund
 
-def print_data(config,my_fund):
+def print_data(config,origin_fund,my_fund):
     for name, group in my_fund.groupby('parent'):
         if name not in json.loads(config['view']['hidden_type']):
-            print(name)
-            # print(group)
-            print(fund_percent(my_fund,'child',name))
-            print('-'*30)
+            print(name,'\n',fund_percent(my_fund,'child',name),'\n'+'-'*30)
     #计算组合占比
-    print('组合比例')
-    print(fund_percent(my_fund,'parent'))
-    print('-'*30)
-    # print(my_fund)
+    print('组合比例\n',fund_percent(my_fund,'parent'),'\n'+'-'*30)
+    print(
+        '账户资产（元）',round(sum(origin_fund['amount']),2),'\n'+
+        '持有收益（元）',round(sum(origin_fund['cysy']),2),'\n'+
+        '累计收益（元）',round(sum(origin_fund['ljsy']),2),'\n'+
+        '-'*30
+    )
 
 def view_fund():
     start = time()
 
+    origin_fund = pd.read_csv(
+        file_path('fund_data.csv'),
+        dtype={'fundcode':str},
+    )
+
     config = configparser.ConfigParser()
     config.read(file_path('config.ini'),encoding='UTF-8')
     
-    my_fund = merge_data(config)
-    print_data(config,my_fund)
+    my_fund = merge_data(config,origin_fund)
+    print_data(config,origin_fund,my_fund)
 
     end = time()
     print('运行时长：',round(end-start,2),'s')
