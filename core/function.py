@@ -1,4 +1,4 @@
-from os import path
+from os import system,path
 
 def file_path(file_name):
     file_path = path.join(
@@ -13,3 +13,10 @@ def file_path(file_name):
         file_name
     )
     return file_path
+
+def mac_notification(title,text):
+    system(
+        """
+        osascript -e 'display notification "{}" with title "{}"'
+        """.format(text,title)
+    )

@@ -1,13 +1,13 @@
 #!/usr/bin/python
 # coding=utf-8
-from tqdm import tqdm
 from function import file_path
+from json import loads
+from re import findall
+from tqdm import tqdm
+from time import time
+from sys import exit
 import configparser
 import requests
-import time
-import json
-import sys
-import re
 
 def get_one_page(fund_code,pageSize,startDate,endDate,pageIndex):
     '''
@@ -33,20 +33,20 @@ def get_one_page(fund_code,pageSize,startDate,endDate,pageIndex):
         'pageSize': pageSize,
         'startDate': startDate,
         'endDate': endDate,
-        '_=': str(int(time.time()))
+        '_=': str(int(time()))
     }
     try:
         r = requests.get(url=url,headers=headers,params=params)
         return r.text
     except requests.exceptions.ConnectionError:
         print("网络无法连接")
-        sys.exit()
+        exit()
 
 def parse_one_page(html):
     '''
     解析网页内容
     '''
-    content = re.findall('\((.*?)\)',html)[0]
+    content = findall('\((.*?)\)',html)[0]
     return content
 
 def get_fund_info(fund_code,pageSize=1,startDate='',endDate='',pageIndex=1):
@@ -55,7 +55,7 @@ def get_fund_info(fund_code,pageSize=1,startDate='',endDate='',pageIndex=1):
     '''
     html = get_one_page(fund_code,pageSize,startDate,endDate,pageIndex)
     if html is not None:
-        lsjz_json = json.loads(parse_one_page(html))
+        lsjz_json = loads(parse_one_page(html))
         return lsjz_json
     return None
 
@@ -64,10 +64,10 @@ def get_nav(fund_list):
 
     progress_bar = tqdm(total=len(fund_list),desc='更新净值')
     for fund_code in fund_list:
-        lsjz_json = get_fund_info(fund_code)
+        lsjz_json = get_fund_info(fund_code)['Data']['LSJZList'][0]
         dwjz_dict[fund_code] = [
-            lsjz_json['Data']['LSJZList'][0]['FSRQ'],
-            lsjz_json['Data']['LSJZList'][0]['DWJZ'],
+            lsjz_json['FSRQ'],
+            lsjz_json['DWJZ'],
         ]
         progress_bar.update(1)
     return dwjz_dict

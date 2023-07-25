@@ -1,12 +1,12 @@
 #!/usr/bin/python
 # coding=utf-8
 from function import file_path
+from time import sleep
+from json import loads
 from tqdm import tqdm
 import configparser
 import pandas as pd
 import requests
-from time import sleep
-import json
 
 def notion_create_page(json_content):
 
@@ -30,7 +30,7 @@ def notion_create_page(json_content):
 
     response = requests.post(url, json=payload, headers=headers)
     
-    sleep(0.5)
+    # sleep(0.5)
     return(response.text)
 
 def notion_update_page(item,json_content):
@@ -73,7 +73,7 @@ def if_page_nan(config,my_fund):
 
             response_text = notion_create_page(json_content)
             # print(response_text)
-            my_fund.loc[nan_index,'page_id'] = json.loads(response_text)['id']
+            my_fund.loc[nan_index,'page_id'] = loads(response_text)['id']
             
         my_fund.to_csv(
             file_path("fund_data.csv"),
@@ -100,8 +100,8 @@ def update_data(diff_index_list,my_fund):
     #   遍历基金并上传
     if len(diff_index_list)>0:
         progress_bar = tqdm(total=len(diff_index_list),desc='上传 Notion')
-        update_list = my_fund.loc[diff_index_list,:].to_dict('records')
-        for item in update_list:
+        update_dict = my_fund.loc[diff_index_list,:].to_dict('records')
+        for item in update_dict:
 
             json_content = {
                 'properties':{

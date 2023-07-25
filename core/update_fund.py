@@ -92,12 +92,14 @@ def calculate_fund_data(my_trans,fundcode,parent_type,star_index):
     data_info = [fundcode,cyfe,parent_type,child,jjfh,jjbj,mcje,cccb,mcsy,lj_cyfe,lj_jjfh,lj_jjbj,lj_mcje]
     return data_info
 
+def fundcode_unique(df,parent_type):
+    trans_fund_list = df.loc[df['parent']==parent_type,'fundcode'].unique()
+    return trans_fund_list
+
 def calculate_base_data(my_trans):
     data_info_list = []
     for parent_type in my_trans['parent'].unique(): #遍历所有的基金策略
-        trans_fund_list = my_trans.loc[
-            my_trans['parent']==parent_type,'fundcode'
-        ].unique() #获得每种策略中的基金
+        trans_fund_list = fundcode_unique(my_trans,parent_type) #获得每种策略中的基金
         # 对交易过的基金进行基础计算
         for fundcode in trans_fund_list:   #遍历基金
             
