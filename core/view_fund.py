@@ -64,7 +64,7 @@ def print_data(config,fake_data,origin_fund,my_fund):
     #   如果是 mac 则发送通知
     sys_platform = platform.platform().lower()
     if 'macos' in sys_platform:
-        mac_notification('',content_text)
+        mac_notification('基金',content_text)
 
 def view_fund():
     start = time()
