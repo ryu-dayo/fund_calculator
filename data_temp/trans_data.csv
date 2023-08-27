@@ -1,1 +1,2 @@
+#基金代码,确认份额,确认净值,确认金额,手续费,买入时间,交易类型,策略,子类型
 fundcode,number_shares,price_share,total_price,commission,date,info,parent,child
