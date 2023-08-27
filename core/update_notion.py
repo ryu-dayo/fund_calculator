@@ -4,14 +4,12 @@ from function import file_path
 from time import sleep
 from json import loads
 from tqdm import tqdm
+from os import path
 import configparser
 import pandas as pd
 import requests
 
-def notion_create_page(json_content):
-
-    config = configparser.ConfigParser()
-    config.read(file_path('config.ini'),encoding='UTF-8')
+def notion_create_page(json_content,config):
 
     url = "https://api.notion.com/v1/pages"
     token = config['notion']['token']
@@ -33,10 +31,7 @@ def notion_create_page(json_content):
     # sleep(0.5)
     return(response.text)
 
-def notion_update_page(item,json_content):
-
-    config = configparser.ConfigParser()
-    config.read(file_path('config.ini'),encoding='UTF-8')
+def notion_update_page(item,json_content,config):
 
     url = "https://api.notion.com/v1/pages/" + item.get('page_id')
     token = config['notion']['token']
@@ -71,7 +66,7 @@ def if_page_nan(config,my_fund):
             if my_fund.loc[nan_index,'child']==my_fund.loc[nan_index,'child']:
                 json_content['永久组合'] = {'relation':[{config['notion_page_id'][my_fund.loc[nan_index,'child']]}]}
 
-            response_text = notion_create_page(json_content)
+            response_text = notion_create_page(json_content,config)
             # print(response_text)
             my_fund.loc[nan_index,'page_id'] = loads(response_text)['id']
             
@@ -96,7 +91,7 @@ def different_data(column_list,my_fund):
     diff_index_list = my_fund.compare(notion_data).index.tolist()
     return diff_index_list
 
-def update_data(diff_index_list,my_fund):
+def update_data(diff_index_list,my_fund,config):
     #   遍历基金并上传
     if len(diff_index_list)>0:
         progress_bar = tqdm(total=len(diff_index_list),desc='上传 Notion')
@@ -114,7 +109,7 @@ def update_data(diff_index_list,my_fund):
                 }
             }
 
-            notion_update_page(item,json_content)
+            notion_update_page(item,json_content,config)
             progress_bar.update(1)
 
         #   备份这次数据，以便下次进行对比
@@ -126,18 +121,24 @@ def update_data(diff_index_list,my_fund):
         print('无修改')
 
 def update_notion():
+    # 加载配置
     config = configparser.ConfigParser()
     config.read(file_path('config.ini'),encoding='UTF-8')
 
-    my_fund = pd.read_csv(
-        file_path('fund_data.csv'),
-        dtype={'fundcode':str},
-    )
+    try:
+        my_fund = pd.read_csv(
+            file_path('fund_data.csv'),
+            dtype={'fundcode':str},
+        )
+    except:
+        print('未找到数据，停止上传至 Notion')
+        exit()
+
     column_list = my_fund.columns
 
-    my_fund = if_page_nan(config,my_fund)
-    diff_index_list = different_data(column_list,my_fund)
-    update_data(diff_index_list,my_fund)
+    my_fund = if_page_nan(config,my_fund) # 检查是否有新购买的基金，如果有则在 Notion 新建页面
+    diff_index_list = different_data(column_list,my_fund) # 和上次上传内容比较，只上传改动内容
+    update_data(diff_index_list,my_fund,config) # 上传
 
 if __name__ == '__main__':
     update_notion()
