@@ -14,7 +14,11 @@ def get_name_page():
     config.read(file_path('config.ini'),encoding='UTF-8')
     
     url = config['url_get']['name_url']
-    fund_content = requests.get(url).text
+    try:
+        fund_content = requests.get(url).text
+    except:
+        print("网络无法连接，请检查配置或者网络")
+        exit()
     return fund_content
 
 def parse_name_page(html):

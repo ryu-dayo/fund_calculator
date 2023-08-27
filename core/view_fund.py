@@ -3,6 +3,7 @@
 from function import file_path,mac_notification
 from json import loads
 from time import time
+from os import path
 import configparser
 import pandas as pd
 import platform
@@ -73,10 +74,16 @@ def view_fund():
     config.read(file_path('config.ini'),encoding='UTF-8')
 
     #   加载原始基金数据和占位数据
-    origin_fund = pd.read_csv(
-        file_path('fund_data.csv'),
-        dtype={'fundcode':str},
-    )
+    if path.isfile(file_path('fund_data.csv')):
+        origin_fund = pd.read_csv(
+            file_path('fund_data.csv'),
+            dtype={'fundcode':str},
+        )
+    else:
+        origin_fund = pd.DataFrame(
+            columns=['fundcode','name','page_id','parent','cysy','cysyl','ljsy','FSRQ','DWJZ','cyfe','child','jjfh','jjbj','mcje','cccb','mcsy']
+        )
+
     fake_data = pd.DataFrame(
         loads(config['view']['fake_data']),
         columns=['fundcode','parent','child','amount']

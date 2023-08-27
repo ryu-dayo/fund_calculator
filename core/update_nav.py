@@ -37,10 +37,10 @@ def get_one_page(fund_code,pageSize,startDate,endDate,pageIndex):
     }
     try:
         r = requests.get(url=url,headers=headers,params=params)
-        return r.text
-    except requests.exceptions.ConnectionError:
-        print("网络无法连接")
+    except:
+        print("网络无法连接，请检查配置或者网络")
         exit()
+    return r.text
 
 def parse_one_page(html):
     '''

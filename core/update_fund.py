@@ -5,6 +5,7 @@ from update_name import get_name_info
 from update_nav import get_nav
 from datetime import datetime
 from time import time
+from os import path
 import pandas as pd
 import numpy as np
 
@@ -160,6 +161,9 @@ def update_fund_nav(my_fund_data):
             not_today_index,'fundcode'
         ].apply(lambda x:dwjz_dict.get(x)[0])
 
+    # 处理为空的净值，一般为新录入且已清仓的基金
+    my_fund_data['DWJZ'] = my_fund_data['DWJZ'].fillna(0)
+
 def calculate_revenue(my_fund_data):
     '计算累计收益，持有收益，持有收益率，持有市值'
     my_fund_data["ljsy"] = round(my_fund_data["lj_cyfe"]*my_fund_data["DWJZ"]+my_fund_data["lj_mcje"]-my_fund_data["lj_jjbj"]+my_fund_data["lj_jjfh"],2)
@@ -168,7 +172,7 @@ def calculate_revenue(my_fund_data):
     my_fund_data.loc[my_fund_data["cyfe"]>0,"cysy"] = round(my_fund_data["DWJZ"]*my_fund_data["cyfe"]-my_fund_data["jjbj"]+my_fund_data["jjfh"],2)
     my_fund_data.loc[my_fund_data["mcsy"]>0,"cysy"] = round(my_fund_data["ljsy"]-my_fund_data["mcsy"],2)
     my_fund_data.loc[my_fund_data["cyfe"]>0,"cysyl"] = round(my_fund_data["cysy"]/my_fund_data["jjbj"],4)
-    my_fund_data.loc[my_fund_data["mcsy"]>0,"cysyl"] = round(my_fund_data["cysy"]/(my_fund_data["jjbj"]-my_fund_data["mcfe"]*my_fund_data["cccb"]),4)
+    my_fund_data.loc[my_fund_data["mcsy"]>0,"cysyl"] = round(my_fund_data["cysy"]/(my_fund_data["jjbj"]-my_fund_data["mcje"]),4)
 
     my_fund_data['amount'] = round((my_fund_data['cyfe']*my_fund_data['DWJZ']),2) # 计算每个基金的总金额
     # print(my_fund_data)
@@ -179,12 +183,18 @@ def update_fund():
     my_trans = pd.read_csv(
         file_path('trans_data.csv'),
         dtype={'fundcode':str},
+        comment='#'
     ).sort_values(by='date').reset_index(drop=True)
-        
-    my_fund = pd.read_csv(
-        file_path('fund_data.csv'),
-        dtype={'fundcode':str},
-    )
+    
+    if path.isfile(file_path('fund_data.csv')):
+        my_fund = pd.read_csv(
+            file_path('fund_data.csv'),
+            dtype={'fundcode':str},
+        )
+    else:
+        my_fund = pd.DataFrame(
+            columns=['fundcode','name','page_id','parent','cysy','cysyl','ljsy','FSRQ','DWJZ','cyfe','child','jjfh','jjbj','mcje','cccb','mcsy']
+        )
 
     # 处理数据，将卖出的份额变为负数
     my_trans.loc[(my_trans['info']=='Sell'),'number_shares'] = -my_trans.loc[

@@ -16,9 +16,12 @@ def export_data():
     if target_folder != '':
 
         for file_name in file_name_list:
-            current_file = file_path(file_name)
-            target_file = target_folder + file_name
-            shutil.copy(current_file, target_file)
+            try:
+                current_file = file_path(file_name)
+                target_file = target_folder + file_name
+                shutil.copy(current_file, target_file)
+            except:
+                continue
 
         print(f'文件已成功备份至 {target_folder}')
 
