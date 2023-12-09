@@ -26,26 +26,12 @@ def trans_filter(my_trans,fundcode,parent_type,info=['Buy','Sell','Income'],star
 def if_liquidation(my_trans,fundcode,parent_type):
     '判断是否有过清仓，返回最后一次清仓交易的行索引+1'
     fund_trans = trans_filter(my_trans,fundcode,parent_type).copy()
-    fund_trans['remaining_shares'] = round(np.cumsum(fund_trans['number_shares']),2)
+    fund_trans['remaining_shares'] = np.cumsum(fund_trans['number_shares']).round(2)
     if 0.00 in list(fund_trans['remaining_shares']):
         star_index = fund_trans[fund_trans['remaining_shares']==0].index.values[-1]+1
     else:
         star_index = 0
     return star_index
-
-def if_sell_part(df,cyfe,sell_shares,jjbj,jjfh,cccb):
-    '''
-    支付宝蚂蚁财富为代表的平台，使用的是平均成本法。卖出的金额中既包含本金也包含收益。
-    卖出金额包含的收益 = 卖出时的收益率 * 卖出的本金
-    '''
-    if (sell_shares<0) & (cyfe>0):
-        mcsy = sum(
-            (df['price_share']*(cyfe-sell_shares)-jjbj+jjfh)/jjbj*
-            (-df['number_shares']*cccb)
-        )
-    else:
-        mcsy = 0
-    return mcsy
 
 def calculate_fund_data(my_trans,fundcode,parent_type,star_index):
     '计算基金各项数据'
@@ -59,7 +45,6 @@ def calculate_fund_data(my_trans,fundcode,parent_type,star_index):
     
     sell_shares = trans_sell_df['number_shares'].sum()
     jjfh = round(trans_income_df['total_price'].sum(),2)
-    mcje = trans_sell_df["total_price"].sum()
     cyfe = round(
         trans_buy_df['number_shares'].sum()+
         trans_income_df['number_shares'].sum()+
@@ -72,7 +57,7 @@ def calculate_fund_data(my_trans,fundcode,parent_type,star_index):
         2
     )
     if cyfe > 0:
-        cccb = round(jjbj/(cyfe-sell_shares),4)
+        cccb = jjbj/(cyfe-sell_shares)
     else:
         cccb = 0
     lj_cyfe = round(
@@ -89,8 +74,7 @@ def calculate_fund_data(my_trans,fundcode,parent_type,star_index):
     )
     lj_jjfh = round(trans_income_all['total_price'].sum(),2)
     child = trans_all_df.loc[trans_all_df.index[-1],'child']
-    mcsy = if_sell_part(trans_sell_df,cyfe,sell_shares,jjbj,jjfh,cccb)
-    data_info = [fundcode,cyfe,parent_type,child,jjfh,jjbj,mcje,cccb,mcsy,lj_cyfe,lj_jjfh,lj_jjbj,lj_mcje]
+    data_info = [fundcode,cyfe,parent_type,child,jjfh,jjbj,cccb,lj_cyfe,lj_jjfh,lj_jjbj,lj_mcje]
     return data_info
 
 def fundcode_unique(df,parent_type):
@@ -110,14 +94,14 @@ def calculate_base_data(my_trans):
             data_info_list.append(data_info)
     trans_data = pd.DataFrame(
         data_info_list,
-        columns=['fundcode','cyfe','parent','child','jjfh','jjbj','mcje','cccb','mcsy','lj_cyfe','lj_jjfh','lj_jjbj','lj_mcje']
+        columns=['fundcode','cyfe','parent','child','jjfh','jjbj','cccb','lj_cyfe','lj_jjfh','lj_jjbj','lj_mcje']
     )
     # print(trans_data)
     return trans_data
 
 def merge_data(my_fund,trans_data):
     '组装数据'
-    for repeat_columns in ['cyfe','child','jjfh','jjbj','mcje','cccb','mcsy','lj_cyfe','lj_jjfh','lj_jjbj','lj_mcje']:
+    for repeat_columns in ['cyfe','child','jjfh','jjbj','cccb','lj_cyfe','lj_jjfh','lj_jjbj','lj_mcje']:
         if repeat_columns in my_fund.columns:
             my_fund = my_fund.drop(repeat_columns,axis=1)
     my_fund_data = pd.merge(
@@ -166,15 +150,16 @@ def update_fund_nav(my_fund_data):
 
 def calculate_revenue(my_fund_data):
     '计算累计收益，持有收益，持有收益率，持有市值'
-    my_fund_data["ljsy"] = round(my_fund_data["lj_cyfe"]*my_fund_data["DWJZ"]+my_fund_data["lj_mcje"]-my_fund_data["lj_jjbj"]+my_fund_data["lj_jjfh"],2)
+    my_fund_data["ljsy"] = (my_fund_data["lj_cyfe"]*my_fund_data["DWJZ"]+my_fund_data["lj_mcje"]-my_fund_data["lj_jjbj"]+my_fund_data["lj_jjfh"]).round(2)
     
     my_fund_data[["cysy","cysyl"]] = 0.0
-    my_fund_data.loc[my_fund_data["cyfe"]>0,"cysy"] = round(my_fund_data["DWJZ"]*my_fund_data["cyfe"]-my_fund_data["jjbj"]+my_fund_data["jjfh"],2)
-    my_fund_data.loc[my_fund_data["mcsy"]>0,"cysy"] = round(my_fund_data["ljsy"]-my_fund_data["mcsy"],2)
-    my_fund_data.loc[my_fund_data["cyfe"]>0,"cysyl"] = round(my_fund_data["cysy"]/my_fund_data["jjbj"],4)
-    my_fund_data.loc[my_fund_data["mcsy"]>0,"cysyl"] = round(my_fund_data["cysy"]/(my_fund_data["jjbj"]-my_fund_data["mcje"]),4)
+    my_fund_data.loc[my_fund_data["cyfe"]>0,"cysy"] = (my_fund_data["DWJZ"]-my_fund_data["cccb"])*my_fund_data["cyfe"]+my_fund_data["jjfh"]
+    my_fund_data.loc[my_fund_data["cyfe"]>0,"cysyl"] = (my_fund_data["cysy"]/(my_fund_data["cccb"]*my_fund_data['cyfe'])).round(4)
 
-    my_fund_data['amount'] = round((my_fund_data['cyfe']*my_fund_data['DWJZ']),2) # 计算每个基金的总金额
+    my_fund_data['cccb'] = my_fund_data['cccb'].round(4)
+    my_fund_data['cysy'] = my_fund_data['cysy'].round(2)
+
+    my_fund_data['amount'] = (my_fund_data['cyfe']*my_fund_data['DWJZ']).round(2) # 计算每个基金的总金额
     # print(my_fund_data)
 
 def update_fund():
@@ -193,7 +178,7 @@ def update_fund():
         )
     else:
         my_fund = pd.DataFrame(
-            columns=['fundcode','name','page_id','parent','cysy','cysyl','ljsy','FSRQ','DWJZ','cyfe','child','jjfh','jjbj','mcje','cccb','mcsy']
+            columns=['fundcode','name','page_id','parent','cysy','cysyl','ljsy','FSRQ','DWJZ','cyfe','child','jjfh','jjbj','cccb']
         )
 
     # 处理数据，将卖出的份额变为负数
