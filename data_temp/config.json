@@ -1,0 +1,30 @@
+{
+    "notion": {
+        "token": "token",
+        "database_id": "database_id",
+        "notion_page_id": {
+            "策略1": "page_id",
+            "策略2": "page_id",
+            "策略3": "page_id",
+            "子类型1": "page_id",
+            "子类型2": "page_id",
+            "子类型3": "page_id"
+        },
+        "upload_enabled": false
+    },
+    "view": {
+        "fake_data": [["", "", "", 0]],
+        "hidden_type": []
+    },
+    "url_get": {
+        "nav_url": "",
+        "name_url": ""
+    },
+    "export": {
+        "file_list": [
+            "trans_data.csv",
+            "fund_data.csv"
+        ],
+        "path": ""
+    }
+}
