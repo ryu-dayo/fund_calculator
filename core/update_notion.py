@@ -122,13 +122,24 @@ def update_data(diff_index_list, my_fund, config):
                 }
                 futures.append(executor.submit(notion_update_page, item, json_content, config))
             
+            success = True
             for future in as_completed(futures):
-                future.result()  # 获取结果，抛出异常则记录
-                progress_bar.update(1)
+                try:
+                    future.result()  # 获取结果，抛出异常则记录
+                    progress_bar.update(1)
+                except Exception as e:
+                    logging.error(f"Error updating page: {e}")
+                    success = False
 
-        # 备份这次数据
-        my_fund.to_csv(file_path("fund_data_backup.csv"), index=False)
         progress_bar.close()
+        
+        if success:   
+            # 备份这次数据
+            my_fund.to_csv(file_path("fund_data_backup.csv"), index=False)
+            logging.info("Data successfully backed up.")
+        else:
+            logging.error("Some updates failed. Data not backed up.")
+            
     else:
         logging.info("无修改需要上传")
 
